@@ -6,13 +6,11 @@ import Parsing from './pages/Parsing';
 function App() {
   return (
     <Router>
-      <div className="min-h-screen gradient-bg text-white">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/classification" element={<Classification />} />
-          <Route path="/parsing" element={<Parsing />} />
-        </Routes>
-      </div>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/classification" element={<Classification />} />
+        <Route path="/parsing" element={<Parsing />} />
+      </Routes>
     </Router>
   );
 }
