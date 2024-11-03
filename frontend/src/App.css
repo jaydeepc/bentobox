@@ -1,7 +1,29 @@
+/* Base styles */
 #root {
   max-width: 100%;
   margin: 0 auto;
-  text-align: center;
+  overflow-x: hidden;
+}
+
+/* Smooth scrolling with header offset - adjusted for mobile */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (min-width: 640px) {
+  html {
+    scroll-padding-top: 7rem;
+  }
+}
+
+body {
+  overflow-x: hidden;
+  touch-action: manipulation;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Bento Box Animation Classes */
@@ -16,6 +38,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .bento-section {
@@ -23,6 +47,7 @@
   z-index: 50;
   transform-origin: center;
   backface-visibility: hidden;
+  will-change: transform;
 }
 
 .bento-container {
@@ -30,7 +55,7 @@
   z-index: 30;
 }
 
-/* Heartbeat animation for clickable services */
+/* Heartbeat animation for clickable services - optimized for mobile */
 @keyframes heartbeat {
   0% {
     transform: scale(1);
@@ -46,69 +71,140 @@
   }
 }
 
-/* Text glow and vibration animation */
-@keyframes textGlow {
+/* Mobile-optimized heartbeat animation */
+@keyframes heartbeat-mobile {
   0% {
-    text-shadow: 0 0 5px rgba(255, 255, 255, 0.6),
-                 0 0 10px rgba(255, 255, 255, 0.4),
-                 0 0 15px rgba(255, 255, 255, 0.2);
-    transform: translate(0, 0);
-  }
-  25% {
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.8),
-                 0 0 20px rgba(255, 255, 255, 0.6),
-                 0 0 30px rgba(255, 255, 255, 0.4);
-    transform: translate(0.5px, 0.5px);
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3);
   }
   50% {
-    text-shadow: 0 0 15px rgba(255, 255, 255, 1),
-                 0 0 30px rgba(255, 255, 255, 0.8),
-                 0 0 45px rgba(255, 255, 255, 0.6);
-    transform: translate(0, 0);
-  }
-  75% {
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.8),
-                 0 0 20px rgba(255, 255, 255, 0.6),
-                 0 0 30px rgba(255, 255, 255, 0.4);
-    transform: translate(-0.5px, -0.5px);
+    transform: scale(1.01);
+    box-shadow: 0 0 10px 3px rgba(239, 68, 68, 0.15);
   }
   100% {
-    text-shadow: 0 0 5px rgba(255, 255, 255, 0.6),
-                 0 0 10px rgba(255, 255, 255, 0.4),
-                 0 0 15px rgba(255, 255, 255, 0.2);
-    transform: translate(0, 0);
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
   }
 }
 
+/* Text glow and vibration animation - optimized for mobile */
+@keyframes textGlow {
+  0% {
+    text-shadow: 0 0 3px rgba(255, 255, 255, 0.4),
+                 0 0 6px rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    text-shadow: 0 0 6px rgba(255, 255, 255, 0.6),
+                 0 0 12px rgba(255, 255, 255, 0.4);
+  }
+  100% {
+    text-shadow: 0 0 3px rgba(255, 255, 255, 0.4),
+                 0 0 6px rgba(255, 255, 255, 0.2);
+  }
+}
+
+@media (min-width: 641px) {
+  @keyframes textGlow {
+    0% {
+      text-shadow: 0 0 5px rgba(255, 255, 255, 0.6),
+                   0 0 10px rgba(255, 255, 255, 0.4);
+    }
+    50% {
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.8),
+                   0 0 20px rgba(255, 255, 255, 0.6);
+    }
+    100% {
+      text-shadow: 0 0 5px rgba(255, 255, 255, 0.6),
+                   0 0 10px rgba(255, 255, 255, 0.4);
+    }
+  }
+}
+
+/* Default animations for larger screens */
 .service-pulse {
   animation: heartbeat 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .service-text {
   animation: textGlow 3s infinite ease-in-out;
 }
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
-  scroll-padding-top: 2rem;
+/* Mobile-optimized animations */
+@media (max-width: 640px) {
+  .service-pulse {
+    animation: heartbeat-mobile 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+  }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
+/* Custom scrollbar - Larger for desktop */
+@media (min-width: 641px) {
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(185, 28, 28, 0.5);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(185, 28, 28, 0.7);
+  }
 }
 
-::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.1);
+/* Mobile-optimized scrollbar */
+@media (max-width: 640px) {
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(185, 28, 28, 0.3);
+    border-radius: 2px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(185, 28, 28, 0.5);
+  }
 }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(185, 28, 28, 0.5);
-  border-radius: 4px;
+/* Japanese pattern background */
+.japanese-pattern {
+  background-size: 20px 20px;
+  opacity: 0.05;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(185, 28, 28, 0.7);
+@media (max-width: 640px) {
+  .japanese-pattern {
+    background-size: 12px 12px;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) {
+  .service-pulse {
+    animation: none;
+  }
+  
+  .service-pulse:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease-in-out;
+  }
+}
+
+/* Prevent text selection on interactive elements */
+.service-pulse,
+.service-text {
+  user-select: none;
+  -webkit-user-select: none;
 }
