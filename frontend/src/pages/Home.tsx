@@ -1,5 +1,9 @@
 import { motion } from 'framer-motion';
 import BentoBox from '../components/BentoBox';
+import japaneseCharacter from '../assets/images/icons/japanese-character-svgrepo-com.svg';
+import japaneseCircle from '../assets/images/icons/japanese-circle-svgrepo-com.svg';
+import dishAndToothpick from '../assets/images/icons/dish-and-toothpick-svgrepo-com.svg';
+import branchesWithLeaves from '../assets/images/icons/branches-with-leaves-svgrepo-com.svg';
 
 const Home = () => {
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -22,7 +26,7 @@ const Home = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <img 
-                src="/src/assets/images/icons/japanese-character-svgrepo-com.svg" 
+                src={japaneseCharacter}
                 alt="Logo" 
                 className="w-6 h-6 invert opacity-80"
               />
@@ -176,7 +180,7 @@ const Home = () => {
               >
                 <div className="bg-red-500/10 rounded-lg p-3 w-12 h-12 mb-6">
                   <img 
-                    src="/src/assets/images/icons/japanese-circle-svgrepo-com.svg" 
+                    src={japaneseCircle}
                     alt="" 
                     className="w-full h-full invert opacity-60"
                   />
@@ -197,7 +201,7 @@ const Home = () => {
               >
                 <div className="bg-red-500/10 rounded-lg p-3 w-12 h-12 mb-6">
                   <img 
-                    src="/src/assets/images/icons/dish-and-toothpick-svgrepo-com.svg" 
+                    src={dishAndToothpick}
                     alt="" 
                     className="w-full h-full invert opacity-60"
                   />
@@ -218,7 +222,7 @@ const Home = () => {
               >
                 <div className="bg-red-500/10 rounded-lg p-3 w-12 h-12 mb-6">
                   <img 
-                    src="/src/assets/images/icons/branches-with-leaves-svgrepo-com.svg" 
+                    src={branchesWithLeaves}
                     alt="" 
                     className="w-full h-full invert opacity-60"
                   />
