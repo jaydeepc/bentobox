@@ -1,5 +1,6 @@
 import express from 'express';
 import { json } from 'body-parser';
+import cors from 'cors';
 import { ParsingRequest, ParsingResponse } from '../../shared/src/types';
 import { LLMService } from '../../shared/src/llm';
 import dotenv from 'dotenv';
@@ -7,6 +8,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
+app.use(cors());
 app.use(json({ limit: '50mb' }));
 
 // Initialize OpenAI client

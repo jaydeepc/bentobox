@@ -13,9 +13,18 @@ export class LLMService {
             throw new Error('OpenAI client not initialized. Call LLMService.initialize() first.');
         }
 
+        // Convert base64 to data URL if needed
+        const imageUrl = document.content.startsWith('data:') 
+            ? document.content 
+            : `data:${document.type === 'pdf' ? 'application/pdf' : 'image/jpeg'};base64,${document.content}`;
+
         return await this.openai.chat.completions.create({
-            model: "gpt-4-vision-preview",
+            model: "gpt-4o",
             messages: [
+                {
+                    role: "system",
+                    content: "You are a document analysis assistant. Always respond in valid JSON format according to the specified schema."
+                },
                 {
                     role: "user",
                     content: [
@@ -23,7 +32,7 @@ export class LLMService {
                         {
                             type: "image_url",
                             image_url: {
-                                url: document.content, // base64 image data
+                                url: imageUrl,
                                 detail: "high"
                             }
                         }
@@ -39,9 +48,9 @@ export class LLMService {
         confidence: number;
         alternatives: Array<{ label: string; confidence: number }>;
     }> {
-        const prompt = `Please analyze this document based on the following classification criteria: ${criteria}
+        const prompt = `Analyze this document based on these criteria: ${criteria}
 
-        Provide your response in the following JSON format:
+        You must respond with ONLY a JSON object in this exact format:
         {
             "classification": "primary classification",
             "confidence": 0.95,
@@ -55,25 +64,40 @@ export class LLMService {
             ]
         }
 
-        Consider both visual elements (layout, logos, design) and textual content in your analysis.`;
+        Do not include any other text or explanation outside of this JSON object.`;
 
-        const completion = await this.analyzeDocument(document, prompt);
-        const response = JSON.parse(completion.choices[0].message.content || '{}');
+        try {
+            const completion = await this.analyzeDocument(document, prompt);
+            const content = completion.choices[0].message.content || '{}';
+            
+            // Try to extract JSON if the response contains additional text
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            const jsonStr = jsonMatch ? jsonMatch[0] : content;
+            
+            const response = JSON.parse(jsonStr);
 
-        return {
-            classification: response.classification,
-            confidence: response.confidence,
-            alternatives: response.alternatives
-        };
+            return {
+                classification: response.classification || 'Unknown',
+                confidence: response.confidence || 0,
+                alternatives: response.alternatives || []
+            };
+        } catch (error) {
+            console.error('Error parsing classification response:', error);
+            return {
+                classification: 'Error',
+                confidence: 0,
+                alternatives: []
+            };
+        }
     }
 
     static async parseDocument(document: Document, schema: string): Promise<{
         fields: Record<string, string>;
         confidence: Record<string, number>;
     }> {
-        const prompt = `Please extract information from this document based on the following schema: ${schema}
+        const prompt = `Extract information from this document based on this schema: ${schema}
 
-        Provide your response in the following JSON format:
+        You must respond with ONLY a JSON object in this exact format:
         {
             "fields": {
                 "fieldName": "extracted value"
@@ -86,14 +110,28 @@ export class LLMService {
             }
         }
 
-        Consider both visual layout and textual content when extracting information.`;
+        Do not include any other text or explanation outside of this JSON object.`;
 
-        const completion = await this.analyzeDocument(document, prompt);
-        const response = JSON.parse(completion.choices[0].message.content || '{}');
+        try {
+            const completion = await this.analyzeDocument(document, prompt);
+            const content = completion.choices[0].message.content || '{}';
+            
+            // Try to extract JSON if the response contains additional text
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            const jsonStr = jsonMatch ? jsonMatch[0] : content;
+            
+            const response = JSON.parse(jsonStr);
 
-        return {
-            fields: response.fields,
-            confidence: response.confidence
-        };
+            return {
+                fields: response.fields || {},
+                confidence: response.confidence || {}
+            };
+        } catch (error) {
+            console.error('Error parsing document response:', error);
+            return {
+                fields: {},
+                confidence: {}
+            };
+        }
     }
 }
