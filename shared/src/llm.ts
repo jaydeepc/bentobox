@@ -19,7 +19,7 @@ export class LLMService {
             : `data:${document.type === 'pdf' ? 'application/pdf' : 'image/jpeg'};base64,${document.content}`;
 
         return await this.openai.chat.completions.create({
-            model: "gpt-4o",
+            model: "gpt-4o-mini",
             messages: [
                 {
                     role: "system",
@@ -95,25 +95,58 @@ export class LLMService {
         fields: Record<string, string>;
         confidence: Record<string, number>;
     }> {
-        const prompt = `Extract information from this document based on this schema: ${schema}
-
-        You must respond with ONLY a JSON object in this exact format:
-        {
-            "fields": {
-                "fieldName": "extracted value"
-            },
-            "confidence": {
-                "fieldName": 0.95
-            },
-            "reasoning": {
-                "fieldName": "explanation of extraction"
-            }
-        }
-
-        Do not include any other text or explanation outside of this JSON object.`;
+        // First, analyze the schema to identify the fields to extract
+        const schemaAnalysisPrompt = `Analyze this schema and list the fields to extract: ${schema}
+        
+        You must respond with ONLY a JSON array of field names. For example:
+        ["invoice_number", "date", "total_amount"]
+        
+        Rules:
+        1. Convert the field names to snake_case
+        2. Only include fields that are explicitly requested
+        3. Do not include any explanatory text
+        4. Do not include any fields that weren't requested`;
 
         try {
-            const completion = await this.analyzeDocument(document, prompt);
+            const schemaCompletion = await this.openai.chat.completions.create({
+                model: "gpt-4o",
+                messages: [
+                    {
+                        role: "system",
+                        content: "You are a schema analyzer. Extract field names from the given schema."
+                    },
+                    {
+                        role: "user",
+                        content: schemaAnalysisPrompt
+                    }
+                ]
+            });
+
+            const fieldsToExtract: string[] = JSON.parse(schemaCompletion.choices[0].message.content || '[]');
+
+            // Now use these fields in the document analysis prompt
+            const extractionPrompt = `Extract the following fields from this document: ${fieldsToExtract.join(', ')}
+
+            Schema details: ${schema}
+
+            You must respond with ONLY a JSON object containing exactly these fields:
+            {
+                "fields": {
+                    ${fieldsToExtract.map((field: string) => `"${field}": "extracted value"`).join(',\n                    ')}
+                },
+                "confidence": {
+                    ${fieldsToExtract.map((field: string) => `"${field}": 0.95`).join(',\n                    ')}
+                }
+            }
+
+            Important:
+            1. Only extract the specified fields
+            2. For each field, provide a confidence score between 0 and 1
+            3. If a field cannot be found, do not include it in the response
+            4. Do not add any fields that weren't requested
+            5. Do not include any other text or explanation outside of this JSON object`;
+
+            const completion = await this.analyzeDocument(document, extractionPrompt);
             const content = completion.choices[0].message.content || '{}';
             
             // Try to extract JSON if the response contains additional text

@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 interface ParsingResult {
   document_id: string;
   extracted_fields: Record<string, string>;
+  confidence_scores: Record<string, number>;
 }
 
 const Parsing = () => {
@@ -46,7 +47,7 @@ const Parsing = () => {
         })
       );
 
-      const response = await axios.post('http://localhost:3002/parse', {
+      const response = await axios.post('http://localhost:3006/parse', {
         documents,
         schema
       });
@@ -57,6 +58,12 @@ const Parsing = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getConfidenceColor = (confidence: number) => {
+    if (confidence >= 0.8) return 'text-green-400';
+    if (confidence >= 0.5) return 'text-yellow-400';
+    return 'text-red-400';
   };
 
   return (
@@ -237,10 +244,15 @@ const Parsing = () => {
                                 transition={{ delay: index * 0.1 + fieldIndex * 0.05 }}
                                 className="bg-gray-800 p-3 rounded border border-red-800/50"
                               >
-                                <span className="text-red-300 block text-sm">
-                                  {key}:
-                                </span>
-                                <span className="text-white">{value}</span>
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="text-red-300 text-sm">
+                                    {key}:
+                                  </span>
+                                  <span className={`text-sm ${getConfidenceColor(result.confidence_scores[key] || 0)}`}>
+                                    {Math.round((result.confidence_scores[key] || 0) * 100)}% confident
+                                  </span>
+                                </div>
+                                <span className="text-white">{value || 'Not found'}</span>
                               </motion.div>
                             ))}
                           </div>
