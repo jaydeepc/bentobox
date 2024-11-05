@@ -8,6 +8,12 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+interface ParsedResult {
+    document_id: string;
+    extracted_fields: Record<string, string>;
+    confidence_scores: Record<string, number>;
+}
+
 const app = express();
 
 // Enable CORS and JSON parsing
@@ -49,31 +55,66 @@ app.post('/parse', validateParsingRequest, async (req: Request, res: Response) =
         const request: ParsingRequest = req.body;
         console.log(`Processing ${request.documents.length} documents`);
 
-        const results = [];
-        for (const doc of request.documents) {
-            console.log(`Parsing document: ${doc.document_id}`);
-            try {
-                const result = await LLMService.parseDocument(doc, request.schema);
-                results.push({
-                    document_id: doc.document_id,
-                    extracted_fields: result.fields,
-                    confidence_scores: result.confidence
-                });
-            } catch (error) {
-                console.error(`Error parsing document ${doc.document_id}:`, error);
+        // Process documents in parallel with a limit of 3 concurrent requests
+        const batchSize = 3;
+        const results: ParsedResult[] = [];
+        
+        for (let i = 0; i < request.documents.length; i += batchSize) {
+            const batch = request.documents.slice(i, i + batchSize);
+            const batchResults = await Promise.all(
+                batch.map(async (doc) => {
+                    console.log(`Parsing document: ${doc.document_id}`);
+                    try {
+                        const result = await LLMService.parseDocument(doc, request.schema);
+                        console.log(`Successfully parsed document: ${doc.document_id}`);
+                        return {
+                            document_id: doc.document_id,
+                            extracted_fields: result.fields,
+                            confidence_scores: result.confidence
+                        };
+                    } catch (error) {
+                        console.error(`Error parsing document ${doc.document_id}:`, error);
+                        return {
+                            document_id: doc.document_id,
+                            extracted_fields: {},
+                            confidence_scores: {}
+                        };
+                    }
+                })
+            );
+            results.push(...batchResults);
+        }
+
+        console.log('Parsing completed successfully');
+        console.log(`Processed ${results.length} documents`);
+        
+        // Verify all documents have results
+        const missingDocs = request.documents.filter(doc => 
+            !results.some(result => result.document_id === doc.document_id)
+        );
+        
+        if (missingDocs.length > 0) {
+            console.warn(`Missing results for documents: ${missingDocs.map(d => d.document_id).join(', ')}`);
+            // Add empty results for missing documents
+            missingDocs.forEach(doc => {
                 results.push({
                     document_id: doc.document_id,
                     extracted_fields: {},
                     confidence_scores: {}
                 });
-            }
+            });
         }
 
-        console.log('Parsing completed successfully');
-        
+        // Sort results to match original document order
+        const sortedResults = results.sort((a, b) => {
+            const aIndex = request.documents.findIndex(doc => doc.document_id === a.document_id);
+            const bIndex = request.documents.findIndex(doc => doc.document_id === b.document_id);
+            return aIndex - bIndex;
+        });
+
         // Create response object with proper structure
         const responseObj = {
-            parsed_results: results
+            parsed_results: sortedResults
         };
 
         // Log the response for debugging
