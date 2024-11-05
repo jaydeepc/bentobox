@@ -23,10 +23,10 @@ const Home = () => {
   };
 
   return (
-    <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+    <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white min-h-screen">
       {/* Header Navigation */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-gray-900/80 backdrop-blur-sm border-b border-gray-800">
-        <nav className="max-w-7xl mx-auto px-4 py-4">
+        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <img 
@@ -34,7 +34,7 @@ const Home = () => {
                 alt="Logo" 
                 className="w-6 h-6 invert opacity-80"
               />
-              <span className="text-base sm:text-lg font-semibold text-red-300">Document Services</span>
+              <span className="text-lg sm:text-xl font-semibold text-red-300">Document Services</span>
             </div>
             
             {/* Mobile Menu Button */}
@@ -68,9 +68,9 @@ const Home = () => {
       </header>
 
       {/* About Section */}
-      <section id="about" className="pt-28 px-4">
+      <section id="about" className="pt-28 sm:pt-32 px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-7xl mx-auto">
-          <div className="flex flex-col gap-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 lg:gap-16">
             {/* Title and Description */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -108,7 +108,7 @@ const Home = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.8 }}
-                className="text-base sm:text-lg lg:text-xl text-gray-300 leading-relaxed text-left"
+                className="text-lg sm:text-xl lg:text-2xl text-gray-300 leading-relaxed text-left"
               >
                 Understanding microservices through the elegance of a bento box. Explore how our document processing 
                 services are organized into specialized, harmonious components.
@@ -120,7 +120,7 @@ const Home = () => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 1, delay: 0.4 }}
-              className="w-full max-w-lg mx-auto"
+              className="w-full max-w-2xl mx-auto lg:mx-0"
             >
               <BentoBox />
             </motion.div>
@@ -129,7 +129,7 @@ const Home = () => {
       </section>
 
       {/* Concept Section */}
-      <section id="concept" className="px-4 mt-16">
+      <section id="concept" className="px-4 sm:px-6 lg:px-8 mt-16 sm:mt-24">
         <div className="w-full max-w-7xl mx-auto py-16">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
@@ -139,7 +139,7 @@ const Home = () => {
             className="max-w-4xl mx-auto"
           >
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-red-400 mb-8 text-left">The Bento Box Concept</h2>
-            <div className="space-y-6">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               <motion.div 
                 className="bg-gray-800/30 rounded-xl p-6 border border-gray-700/30 backdrop-blur-sm"
                 initial={{ opacity: 0, y: 20 }}
@@ -187,7 +187,7 @@ const Home = () => {
       </section>
 
       {/* Services Section */}
-      <section id="services" className="px-4 mt-16">
+      <section id="services" className="px-4 sm:px-6 lg:px-8 mt-16 sm:mt-24">
         <div className="w-full max-w-7xl mx-auto py-16">
           <motion.div
             initial={{ opacity: 0, y: 40 }}

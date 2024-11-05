@@ -14,59 +14,59 @@ const BentoBox = ({ isMinimized = false }: BentoBoxProps) => {
   };
 
   return (
-    <div className={`relative w-full mx-auto ${isMinimized ? 'p-1' : 'p-2 sm:p-4'}`}>
+    <div className={`relative w-full mx-auto ${isMinimized ? 'p-1' : 'p-4 sm:p-6 lg:p-8'}`}>
       {/* Main Bento Box Container */}
-      <div className="relative w-full aspect-[4/3] rounded-lg sm:rounded-2xl bg-black p-2 sm:p-3 shadow-2xl">
-        <div className="absolute inset-0 rounded-lg sm:rounded-2xl border-2 sm:border-4 border-black"></div>
+      <div className="relative w-full aspect-[4/3] rounded-2xl bg-black p-3 sm:p-4 shadow-2xl">
+        <div className="absolute inset-0 rounded-2xl border-4 border-black"></div>
         
         {/* Inner Box with Red Background */}
-        <div className="relative h-full w-full bg-[#8B0000] rounded-md sm:rounded-xl overflow-hidden">
+        <div className="relative h-full w-full bg-[#8B0000] rounded-xl overflow-hidden">
           {/* Grid Layout */}
-          <div className="absolute inset-0 grid grid-cols-2 gap-1 sm:gap-2 p-1 sm:p-2">
+          <div className="absolute inset-0 grid grid-cols-2 gap-2 sm:gap-3 p-2 sm:p-3">
             {/* Left Column - Split into 3 sections */}
-            <div className="grid grid-rows-3 gap-1 sm:gap-2">
+            <div className="grid grid-rows-3 gap-2 sm:gap-3">
               <motion.div
-                className="relative bg-[#B22222] rounded-md sm:rounded-lg shadow-inner cursor-pointer overflow-hidden service-pulse"
+                className="relative bg-[#B22222] rounded-lg shadow-inner cursor-pointer overflow-hidden service-pulse"
                 whileHover={{ scale: 1.02 }}
                 onClick={() => handleSectionClick('/classification')}
               >
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-1 sm:p-2">
-                  <DocumentMagnifyingGlassIcon className="h-4 w-4 sm:h-6 sm:w-6 text-white mb-0.5 sm:mb-1" />
-                  <h3 className="text-white text-xs sm:text-sm font-semibold text-center service-text">Classification</h3>
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-2 sm:p-3">
+                  <DocumentMagnifyingGlassIcon className="h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10 text-white mb-1 sm:mb-2" />
+                  <h3 className="text-white text-sm sm:text-base lg:text-lg font-semibold text-center service-text">Classification</h3>
                 </div>
               </motion.div>
 
               {/* Placeholder for future service */}
               <motion.div
-                className="relative bg-[#B22222] rounded-md sm:rounded-lg shadow-inner cursor-not-allowed overflow-hidden opacity-60"
+                className="relative bg-[#B22222] rounded-lg shadow-inner cursor-not-allowed overflow-hidden opacity-60"
                 whileHover={{ scale: 1.02 }}
               >
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <p className="text-white/50 text-[10px] sm:text-xs">Coming Soon</p>
+                  <p className="text-white/50 text-xs sm:text-sm lg:text-base">Coming Soon</p>
                 </div>
               </motion.div>
 
               {/* Placeholder for future service */}
               <motion.div
-                className="relative bg-[#B22222] rounded-md sm:rounded-lg shadow-inner cursor-not-allowed overflow-hidden opacity-60"
+                className="relative bg-[#B22222] rounded-lg shadow-inner cursor-not-allowed overflow-hidden opacity-60"
                 whileHover={{ scale: 1.02 }}
               >
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <p className="text-white/50 text-[10px] sm:text-xs">Coming Soon</p>
+                  <p className="text-white/50 text-xs sm:text-sm lg:text-base">Coming Soon</p>
                 </div>
               </motion.div>
             </div>
 
             {/* Right Column - Single large section */}
             <motion.div
-              className="relative bg-[#B22222] rounded-md sm:rounded-lg shadow-inner cursor-pointer overflow-hidden service-pulse"
+              className="relative bg-[#B22222] rounded-lg shadow-inner cursor-pointer overflow-hidden service-pulse"
               whileHover={{ scale: 1.02 }}
               onClick={() => handleSectionClick('/parsing')}
             >
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-1 sm:p-2">
-                <DocumentTextIcon className="h-6 w-6 sm:h-8 sm:w-8 text-white mb-1 sm:mb-2" />
-                <h3 className="text-white text-sm sm:text-base font-semibold text-center service-text mb-0.5 sm:mb-1">Parsing</h3>
-                <p className="text-white/70 text-[10px] sm:text-xs text-center px-1">
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-2 sm:p-4">
+                <DocumentTextIcon className="h-8 w-8 sm:h-12 sm:w-12 lg:h-16 lg:w-16 text-white mb-2 sm:mb-3" />
+                <h3 className="text-white text-base sm:text-lg lg:text-xl font-semibold text-center service-text mb-1 sm:mb-2">Parsing</h3>
+                <p className="text-white/70 text-xs sm:text-sm lg:text-base text-center max-w-[80%]">
                   Extract information from documents
                 </p>
               </div>
@@ -85,7 +85,7 @@ const BentoBox = ({ isMinimized = false }: BentoBoxProps) => {
         </div>
 
         {/* Shine Effect */}
-        <div className="absolute inset-0 rounded-md sm:rounded-xl bg-gradient-to-br from-white/10 to-transparent pointer-events-none"></div>
+        <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/10 to-transparent pointer-events-none"></div>
       </div>
 
       {/* Chopsticks - Only show when not minimized and on larger screens */}
