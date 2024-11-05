@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { DocumentMagnifyingGlassIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+import { DocumentMagnifyingGlassIcon, DocumentTextIcon, DocumentDuplicateIcon } from '@heroicons/react/24/outline';
 
 interface BentoBoxProps {
   isMinimized?: boolean;
@@ -36,13 +36,14 @@ const BentoBox = ({ isMinimized = false }: BentoBoxProps) => {
                 </div>
               </motion.div>
 
-              {/* Placeholder for future service */}
               <motion.div
-                className="relative bg-[#B22222] rounded-lg shadow-inner cursor-not-allowed overflow-hidden opacity-60"
+                className="relative bg-[#B22222] rounded-lg shadow-inner cursor-pointer overflow-hidden service-pulse"
                 whileHover={{ scale: 1.02 }}
+                onClick={() => handleSectionClick('/matching')}
               >
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <p className="text-white/50 text-xs sm:text-sm lg:text-base">Coming Soon</p>
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-2 sm:p-3">
+                  <DocumentDuplicateIcon className="h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10 text-white mb-1 sm:mb-2" />
+                  <h3 className="text-white text-sm sm:text-base lg:text-lg font-semibold text-center service-text">Matching</h3>
                 </div>
               </motion.div>
 
