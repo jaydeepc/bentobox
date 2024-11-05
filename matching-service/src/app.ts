@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { json } from 'body-parser';
 import OpenAI from 'openai';
+import type { ChatCompletionContentPart, ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -37,18 +38,30 @@ interface MatchedField {
 
 interface MatchResult {
     document_id_a: string;
-    document_id_b: string;
+    document_id_b?: string;
     matched_fields: Record<string, MatchedField>;
-    overall_status: 'match' | 'mismatch' | 'partial_match';
+    overall_status: 'match' | 'partial_match' | 'mismatch';
     confidence: number;
     reason: string;
+}
+
+interface ComparisonValue {
+    field: string;
+    value: string;
+}
+
+interface GPTResponse {
+    matched_fields?: Record<string, MatchedField>;
+    overall_status?: 'match' | 'partial_match' | 'mismatch';
+    confidence?: number;
+    reason?: string;
 }
 
 // Helper function to ensure proper JSON formatting
 function formatMatchResult(result: Partial<MatchResult>): MatchResult {
     return {
         document_id_a: result.document_id_a || '',
-        document_id_b: result.document_id_b || '',
+        document_id_b: result.document_id_b,
         matched_fields: Object.entries(result.matched_fields || {}).reduce((acc, [key, value]) => ({
             ...acc,
             [key]: {
@@ -68,86 +81,164 @@ function formatMatchResult(result: Partial<MatchResult>): MatchResult {
 // Matching endpoint
 app.post('/match', async (req, res) => {
     try {
-        const { documents_a, documents_b, criteria } = req.body;
+        const { documents_a, documents_b, criteria, comparison_values } = req.body;
 
-        if (!documents_a?.length || !documents_b?.length || !criteria) {
+        if (!documents_a?.length) {
             return res.status(400).json({
-                error: 'Missing required fields'
+                error: 'At least one document is required in documents_a'
             });
         }
 
-        if (documents_a.length !== documents_b.length) {
+        if (!documents_b?.length && !comparison_values) {
             return res.status(400).json({
-                error: 'Document arrays must have the same length'
+                error: 'Either documents_b or comparison_values must be provided'
+            });
+        }
+
+        if (documents_b?.length && documents_a.length !== documents_b.length) {
+            return res.status(400).json({
+                error: 'Document arrays must have the same length when comparing documents'
             });
         }
 
         const results: MatchResult[] = [];
         for (let i = 0; i < documents_a.length; i++) {
             const docA = documents_a[i];
-            const docB = documents_b[i];
             
             try {
-                const completion = await openai.chat.completions.create({
-                    model: "gpt-4o",
-                    messages: [
+                let messages: ChatCompletionMessageParam[];
+                if (documents_b) {
+                    const docB = documents_b[i];
+                    const content: ChatCompletionContentPart[] = [
                         {
-                            role: "system",
-                            content: `You are a document comparison expert. Analyze documents and provide results in this exact JSON format:
-                            {
-                                "matched_fields": {
-                                    "field_name": {
-                                        "value_a": "value from doc A",
-                                        "value_b": "value from doc B",
-                                        "status": "match/mismatch/partial_match",
-                                        "confidence": 0.95,
-                                        "reason": "explanation"
-                                    }
-                                },
-                                "overall_status": "match/partial_match/mismatch",
-                                "confidence": 0.95,
-                                "reason": "overall explanation"
-                            }`
+                            type: "text",
+                            text: `Compare these documents based on these specific criteria: ${criteria}
+
+Instructions:
+1. ONLY compare the fields specified in the criteria
+2. Do not extract or compare any additional fields
+3. For each specified field:
+   - Extract the exact values from both documents
+   - Compare them carefully
+   - Consider minor variations
+   - Provide confidence scores
+   - Explain any differences
+
+Respond with a JSON object in this exact format:
+{
+    "matched_fields": {
+        "field_name": {
+            "value_a": "exact text from doc A",
+            "value_b": "exact text from doc B",
+            "status": "match/mismatch/partial_match",
+            "confidence": 0.95,
+            "reason": "detailed explanation"
+        }
+    },
+    "overall_status": "match/partial_match/mismatch",
+    "confidence": 0.95,
+    "reason": "detailed explanation"
+}`
                         },
                         {
-                            role: "user",
-                            content: [
-                                { 
-                                    type: "text", 
-                                    text: `Compare these documents based on: ${criteria}. Respond ONLY with a JSON object in the specified format.` 
-                                },
-                                {
-                                    type: "image_url",
-                                    image_url: {
-                                        url: docA.content.startsWith('data:') 
-                                            ? docA.content 
-                                            : `data:${docA.type === 'pdf' ? 'application/pdf' : 'image/jpeg'};base64,${docA.content}`
-                                    }
-                                },
-                                {
-                                    type: "image_url",
-                                    image_url: {
-                                        url: docB.content.startsWith('data:') 
-                                            ? docB.content 
-                                            : `data:${docB.type === 'pdf' ? 'application/pdf' : 'image/jpeg'};base64,${docB.content}`
-                                    }
-                                }
-                            ]
+                            type: "image_url",
+                            image_url: {
+                                url: docA.content.startsWith('data:') 
+                                    ? docA.content 
+                                    : `data:${docA.type === 'pdf' ? 'application/pdf' : 'image/jpeg'};base64,${docA.content}`
+                            }
+                        },
+                        {
+                            type: "image_url",
+                            image_url: {
+                                url: docB.content.startsWith('data:') 
+                                    ? docB.content 
+                                    : `data:${docB.type === 'pdf' ? 'application/pdf' : 'image/jpeg'};base64,${docB.content}`
+                            }
                         }
-                    ],
+                    ];
+
+                    messages = [
+                        {
+                            role: "system" as const,
+                            content: "You are an expert document analyzer. Your task is to compare ONLY the specified fields between documents. Do not extract or compare any additional information."
+                        },
+                        {
+                            role: "user" as const,
+                            content
+                        }
+                    ];
+                } else {
+                    // Compare with provided values
+                    const fieldsToMatch = (comparison_values as ComparisonValue[]).map(v => `"${v.field}": "${v.value}"`).join(', ');
+                    const content: ChatCompletionContentPart[] = [
+                        {
+                            type: "text",
+                            text: `Find and compare ONLY these specific fields and values in the document:
+{${fieldsToMatch}}
+
+Instructions:
+1. ONLY look for the exact fields listed above
+2. Do not extract or compare any other fields
+3. For each specified field:
+   - Find the exact value in the document
+   - Compare with the provided value
+   - Consider minor variations
+   - Provide confidence score
+   - Explain any differences
+
+Respond with a JSON object in this exact format:
+{
+    "matched_fields": {
+        "field_name": {
+            "value_a": "exact text from document",
+            "value_b": "expected value",
+            "status": "match/mismatch/partial_match",
+            "confidence": 0.95,
+            "reason": "detailed explanation"
+        }
+    },
+    "overall_status": "match/partial_match/mismatch",
+    "confidence": 0.95,
+    "reason": "detailed explanation"
+}`
+                        },
+                        {
+                            type: "image_url",
+                            image_url: {
+                                url: docA.content.startsWith('data:') 
+                                    ? docA.content 
+                                    : `data:${docA.type === 'pdf' ? 'application/pdf' : 'image/jpeg'};base64,${docA.content}`
+                            }
+                        }
+                    ];
+
+                    messages = [
+                        {
+                            role: "system" as const,
+                            content: "You are an expert document analyzer. Your task is to find and compare ONLY the specified fields in the document. Do not extract or compare any additional information."
+                        },
+                        {
+                            role: "user" as const,
+                            content
+                        }
+                    ];
+                }
+
+                const completion = await openai.chat.completions.create({
+                    model: "gpt-4o",
+                    messages,
                     max_tokens: 4096
                 });
 
                 const content = completion.choices[0].message.content || '{}';
-                let response;
+                let response: GPTResponse;
                 try {
-                    // Try to extract JSON from the response
                     const jsonMatch = content.match(/\{[\s\S]*\}/);
                     const jsonStr = jsonMatch ? jsonMatch[0] : '{}';
-                    response = JSON.parse(jsonStr);
+                    response = JSON.parse(jsonStr) as GPTResponse;
                 } catch (parseError) {
                     console.error('Error parsing GPT response:', parseError);
-                    // Create a default response if parsing fails
                     response = {
                         matched_fields: {},
                         overall_status: 'mismatch',
@@ -156,10 +247,29 @@ app.post('/match', async (req, res) => {
                     };
                 }
 
+                // Ensure only requested fields are included
+                const filteredFields: Record<string, MatchedField> = {};
+                if (documents_b) {
+                    // For document-to-document mode, keep fields mentioned in criteria
+                    const criteriaFields = criteria.toLowerCase().match(/\b\w+\b/g) || [];
+                    Object.entries(response.matched_fields || {}).forEach(([field, value]) => {
+                        if (criteriaFields.some((cf: string) => field.toLowerCase().includes(cf))) {
+                            filteredFields[field] = value as MatchedField;
+                        }
+                    });
+                } else {
+                    // For document-to-values mode, only keep fields from comparison_values
+                    (comparison_values as ComparisonValue[]).forEach(({ field }: ComparisonValue) => {
+                        if (response.matched_fields?.[field]) {
+                            filteredFields[field] = response.matched_fields[field] as MatchedField;
+                        }
+                    });
+                }
+
                 const result = formatMatchResult({
                     document_id_a: docA.document_id,
-                    document_id_b: docB.document_id,
-                    matched_fields: response.matched_fields || {},
+                    document_id_b: documents_b ? documents_b[i].document_id : undefined,
+                    matched_fields: filteredFields,
                     overall_status: response.overall_status || 'mismatch',
                     confidence: response.confidence || 0,
                     reason: response.reason || 'Comparison completed'
@@ -167,10 +277,10 @@ app.post('/match', async (req, res) => {
 
                 results.push(result);
             } catch (error) {
-                console.error(`Error processing document pair ${i + 1}:`, error);
+                console.error(`Error processing document ${docA.document_id}:`, error);
                 results.push(formatMatchResult({
                     document_id_a: docA.document_id,
-                    document_id_b: docB.document_id,
+                    document_id_b: documents_b ? documents_b[i].document_id : undefined,
                     matched_fields: {},
                     overall_status: 'mismatch',
                     confidence: 0,
@@ -179,7 +289,6 @@ app.post('/match', async (req, res) => {
             }
         }
 
-        // Send properly formatted JSON response
         res.json({ match_results: results });
     } catch (error) {
         console.error('Match error:', error);
