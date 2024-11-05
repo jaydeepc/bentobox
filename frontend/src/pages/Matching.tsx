@@ -4,18 +4,21 @@ import { DocumentDuplicateIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
+interface MatchedField {
+  value_a: string;
+  value_b: string;
+  status: 'match' | 'mismatch' | 'partial_match';
+  confidence: number;
+  reason: string;
+}
+
 interface MatchResult {
   document_id_a: string;
   document_id_b: string;
-  matched_fields: {
-    [key: string]: {
-      value_a: string;
-      value_b: string;
-      status: 'match' | 'mismatch';
-      delta?: string;
-    };
-  };
+  matched_fields: Record<string, MatchedField>;
   overall_status: 'match' | 'partial_match' | 'mismatch';
+  confidence: number;
+  reason: string;
 }
 
 const Matching = () => {
@@ -24,17 +27,23 @@ const Matching = () => {
   const [criteria, setCriteria] = useState('');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<MatchResult[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setFiles(Array.from(e.target.files));
+      setError(null);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (files.length < 2) return;
+    if (files.length < 2) {
+      setError('Please select two documents to compare');
+      return;
+    }
     setLoading(true);
+    setError(null);
 
     try {
       const [file1, file2] = files;
@@ -57,7 +66,8 @@ const Matching = () => {
         })
       ]);
 
-      const response = await axios.post('http://localhost:3003/match', {
+      console.log('Sending request to matching service...');
+      const response = await axios.post('http://localhost:3007/match', {
         documents_a: [{
           document_id: file1.name,
           content: base64_1,
@@ -71,11 +81,28 @@ const Matching = () => {
         criteria
       });
 
+      console.log('Received response:', response.data);
       setResults(response.data.match_results);
     } catch (error) {
       console.error('Matching error:', error);
+      setError('Error comparing documents. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getConfidenceColor = (confidence: number) => {
+    if (confidence >= 0.8) return 'text-green-400';
+    if (confidence >= 0.5) return 'text-yellow-400';
+    return 'text-red-400';
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'match': return 'text-green-400';
+      case 'partial_match': return 'text-yellow-400';
+      case 'mismatch': return 'text-red-400';
+      default: return 'text-gray-400';
     }
   };
 
@@ -213,6 +240,12 @@ const Matching = () => {
                     />
                   </div>
 
+                  {error && (
+                    <div className="text-red-400 text-sm">
+                      {error}
+                    </div>
+                  )}
+
                   <motion.button
                     type="submit"
                     disabled={loading || files.length < 2 || !criteria}
@@ -248,11 +281,33 @@ const Matching = () => {
                               {result.document_id_a} ↔ {result.document_id_b}
                             </p>
                           </div>
+
+                          <div className="mb-4 pb-4 border-b border-red-800/30">
+                            <div className="flex justify-between items-center">
+                              <span className="text-red-300">Overall Status:</span>
+                              <span className={`${getStatusColor(result.overall_status)}`}>
+                                {result.overall_status.replace('_', ' ')}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center mt-2">
+                              <span className="text-red-300">Confidence:</span>
+                              <span className={getConfidenceColor(result.confidence)}>
+                                {Math.round(result.confidence * 100)}%
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-300 mt-2">{result.reason}</p>
+                          </div>
+
                           <div className="space-y-4">
                             {Object.entries(result.matched_fields).map(([field, comparison]) => (
                               <div key={field} className="border-t border-red-800/30 pt-4">
-                                <h4 className="text-lg font-medium text-red-300 mb-2">{field}</h4>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="flex justify-between items-center mb-2">
+                                  <h4 className="text-lg font-medium text-red-300">{field}</h4>
+                                  <span className={getStatusColor(comparison.status)}>
+                                    {comparison.status.replace('_', ' ')}
+                                  </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 mb-2">
                                   <div>
                                     <span className="text-gray-400">Document A:</span>
                                     <span className="ml-2 text-white">{comparison.value_a}</span>
@@ -262,21 +317,15 @@ const Matching = () => {
                                     <span className="ml-2 text-white">{comparison.value_b}</span>
                                   </div>
                                 </div>
-                                {comparison.status === 'mismatch' && comparison.delta && (
-                                  <p className="mt-2 text-yellow-500">{comparison.delta}</p>
-                                )}
+                                <div className="flex justify-between items-center text-sm">
+                                  <span className="text-gray-400">Confidence:</span>
+                                  <span className={getConfidenceColor(comparison.confidence)}>
+                                    {Math.round(comparison.confidence * 100)}%
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-300 mt-2">{comparison.reason}</p>
                               </div>
                             ))}
-                          </div>
-                          <div className="mt-4 pt-4 border-t border-red-800/30">
-                            <span className="text-red-300">Overall Status: </span>
-                            <span className={`font-medium ${
-                              result.overall_status === 'match' ? 'text-green-400' :
-                              result.overall_status === 'partial_match' ? 'text-yellow-400' :
-                              'text-red-400'
-                            }`}>
-                              {result.overall_status.replace('_', ' ')}
-                            </span>
                           </div>
                         </motion.div>
                       ))}
