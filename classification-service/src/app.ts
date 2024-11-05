@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import { json } from 'body-parser';
 import cors from 'cors';
 import { body, validationResult } from 'express-validator';
-import { ClassificationRequest, ClassificationResponse } from '../../shared/src/types';
+import { ClassificationRequest } from '../../shared/src/types';
 import { LLMService } from '../../shared/src/llm';
 import dotenv from 'dotenv';
 
@@ -10,7 +10,7 @@ dotenv.config();
 
 const app = express();
 
-// Enable CORS and JSON parsing first
+// Enable CORS and JSON parsing
 app.use(cors());
 app.use(json({ limit: '50mb' }));
 
@@ -49,23 +49,49 @@ app.post('/classify', validateClassificationRequest, async (req: Request, res: R
         const request: ClassificationRequest = req.body;
         console.log(`Processing ${request.documents.length} documents`);
 
-        const classificationPromises = request.documents.map(async (doc) => {
+        const results = [];
+        for (const doc of request.documents) {
             console.log(`Classifying document: ${doc.document_id}`);
-            const result = await LLMService.classifyDocument(doc, request.criteria);
-
-            return {
-                document_id: doc.document_id,
-                classification: result.classification,
-                confidence_score: result.confidence,
-                alternative_classifications: result.alternatives
-            };
-        });
-
-        const results = await Promise.all(classificationPromises);
-        const response: ClassificationResponse = { results };
+            try {
+                const result = await LLMService.classifyDocument(doc, request.criteria);
+                results.push({
+                    document_id: doc.document_id,
+                    is_authentic: result.is_authentic,
+                    authenticity_confidence: result.authenticity_confidence,
+                    authenticity_reason: result.authenticity_reason,
+                    classification: result.classification,
+                    confidence: result.confidence,
+                    classification_reason: result.classification_reason,
+                    alternatives: result.alternatives
+                });
+            } catch (error) {
+                console.error(`Error classifying document ${doc.document_id}:`, error);
+                results.push({
+                    document_id: doc.document_id,
+                    is_authentic: false,
+                    authenticity_confidence: 0,
+                    authenticity_reason: 'Error analyzing document authenticity',
+                    classification: 'Error',
+                    confidence: 0,
+                    classification_reason: 'Error analyzing document',
+                    alternatives: []
+                });
+            }
+        }
 
         console.log('Classification completed successfully');
-        res.json(response);
+        
+        // Create response object with proper structure
+        const responseObj = {
+            classification_results: results
+        };
+
+        // Log the response for debugging
+        console.log('Response:', JSON.stringify(responseObj, null, 2));
+        
+        // Send response with explicit content type
+        res.setHeader('Content-Type', 'application/json');
+        res.send(JSON.stringify(responseObj));
     } catch (error) {
         console.error('Classification error:', error);
         res.status(500).json({
@@ -98,7 +124,7 @@ app.use((req: Request, res: Response) => {
     });
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3005;
 
 const server = app.listen(PORT, () => {
     console.log(`Classification service running on port ${PORT}`);
