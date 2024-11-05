@@ -138,47 +138,50 @@ const Home = () => {
             transition={{ duration: 0.8 }}
             className="max-w-4xl mx-auto"
           >
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-red-400 mb-8 text-left">The Bento Box Concept</h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-red-400 mb-12 text-center">The Bento Box Concept</h2>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
               <motion.div 
-                className="bg-gray-800/30 rounded-xl p-6 border border-gray-700/30 backdrop-blur-sm"
+                className="relative bg-gray-800 rounded-xl p-8 border border-red-800/50 shadow-lg overflow-hidden group hover:bg-gray-800/80 transition-colors duration-300"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: 0.2 }}
               >
-                <h3 className="text-xl sm:text-2xl font-bold text-red-300 mb-4">Organized Compartments</h3>
-                <p className="text-base sm:text-lg text-gray-300 leading-relaxed">
-                  Just as a bento box neatly organizes different dishes into compartments, our microservices 
-                  architecture arranges document processing capabilities into distinct, specialized modules.
+                <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-red-500/50 to-transparent"></div>
+                <h3 className="text-2xl font-bold text-red-300 mb-4 group-hover:text-red-400 transition-colors duration-300">Organized Compartments</h3>
+                <p className="text-lg text-gray-300 leading-relaxed group-hover:text-white transition-colors duration-300">
+                  Just as a bento box neatly organizes different dishes, our microservices architecture arranges document 
+                  processing capabilities into distinct, specialized modules.
                 </p>
               </motion.div>
 
               <motion.div 
-                className="bg-gray-800/30 rounded-xl p-6 border border-gray-700/30 backdrop-blur-sm"
+                className="relative bg-gray-800 rounded-xl p-8 border border-red-800/50 shadow-lg overflow-hidden group hover:bg-gray-800/80 transition-colors duration-300"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: 0.3 }}
               >
-                <h3 className="text-xl sm:text-2xl font-bold text-red-300 mb-4">Perfect Harmony</h3>
-                <p className="text-base sm:text-lg text-gray-300 leading-relaxed">
-                  Each service is self-contained yet designed to complement others. Like the components of a 
-                  bento box, they can be used individually or combined to create the perfect solution.
+                <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-red-500/50 to-transparent"></div>
+                <h3 className="text-2xl font-bold text-red-300 mb-4 group-hover:text-red-400 transition-colors duration-300">Perfect Harmony</h3>
+                <p className="text-lg text-gray-300 leading-relaxed group-hover:text-white transition-colors duration-300">
+                  Each service is self-contained yet designed to complement others, like the components of a bento box 
+                  working together to create the perfect meal.
                 </p>
               </motion.div>
 
               <motion.div 
-                className="bg-gray-800/30 rounded-xl p-6 border border-gray-700/30 backdrop-blur-sm"
+                className="relative bg-gray-800 rounded-xl p-8 border border-red-800/50 shadow-lg overflow-hidden group hover:bg-gray-800/80 transition-colors duration-300"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: 0.4 }}
               >
-                <h3 className="text-xl sm:text-2xl font-bold text-red-300 mb-4">Modular Integration</h3>
-                <p className="text-base sm:text-lg text-gray-300 leading-relaxed">
-                  Mix and match services to create custom document processing workflows. The modular nature 
-                  allows for flexible integration into your existing applications.
+                <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-red-500/50 to-transparent"></div>
+                <h3 className="text-2xl font-bold text-red-300 mb-4 group-hover:text-red-400 transition-colors duration-300">Modular Integration</h3>
+                <p className="text-lg text-gray-300 leading-relaxed group-hover:text-white transition-colors duration-300">
+                  Mix and match services to create custom workflows, just like selecting different items to create your 
+                  perfect bento box combination.
                 </p>
               </motion.div>
             </div>
@@ -253,10 +256,10 @@ const Home = () => {
                     className="w-full h-full invert opacity-60"
                   />
                 </div>
-                <h3 className="text-xl sm:text-2xl font-bold text-red-300 mb-4">More Coming Soon</h3>
+                <h3 className="text-xl sm:text-2xl font-bold text-red-300 mb-4">Matching Service</h3>
                 <p className="text-base sm:text-lg text-gray-300 leading-relaxed">
-                  Our collection of document processing services is growing. Stay tuned for additional specialized 
-                  services to enhance your workflows.
+                  Compare documents to identify matching elements and discrepancies based on configurable criteria. 
+                  Perfect for verifying consistency across related documents.
                 </p>
               </motion.div>
             </div>
