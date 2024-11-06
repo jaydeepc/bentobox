@@ -47,7 +47,7 @@ const Parsing = () => {
         })
       );
 
-      const response = await axios.post('http://localhost:3006/parse', {
+      const response = await axios.post('http://localhost:3002/parse', {
         documents,
         schema
       });

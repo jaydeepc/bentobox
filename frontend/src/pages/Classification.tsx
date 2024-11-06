@@ -77,7 +77,7 @@ const Classification = () => {
         })
       );
 
-      const response = await axios.post('http://localhost:3005/classify', {
+      const response = await axios.post('http://localhost:3001/classify', {
         documents: documentsData,
         criteria
       });
