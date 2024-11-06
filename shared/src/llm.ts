@@ -84,36 +84,36 @@ export class LLMService {
                         Your first task is to identify the document type based on visual layout and content,
                         regardless of authenticity.
 
-                        Document Categories:
-                        1. Government IDs
-                           - Aadhaar Card: 12-digit number, UIDAI logo, demographic info
-                           - PAN Card: 10-char alphanumeric, Income Tax logo
-                           - Voter ID: EPIC number, electoral details
-                           - Driving License: License number, RTO details
-                           - Passport: MRZ code, photo page layout
-                        
-                        2. Educational Documents
-                           - Certificates: Title, issuing institution, date
-                           - Transcripts: Subject list, grades, letterhead
-                           - Marksheets: Exam details, marks table
-                        
-                        3. Financial Documents
-                           - Bank Statements: Account details, transaction list
-                           - Tax Forms: PAN number, assessment year
-                           - Invoices: Invoice number, amount details
-                        
-                        4. Professional Documents
-                           - Business Letters: Letterhead, signature block
-                           - Contracts: Clause structure, party details
-                           - Reports: Title page, section headers
+                        Document Types (Use EXACTLY these names):
+                        - AADHAAR
+                        - PAN CARD
+                        - VOTER ID
+                        - DRIVING LICENSE
+                        - PASSPORT
+                        - BANK STATEMENT
+                        - TAX FORM
+                        - INVOICE
+                        - CERTIFICATE
+                        - TRANSCRIPT
+                        - MARKSHEET
+                        - BUSINESS LETTER
+                        - CONTRACT
+                        - REPORT
+
+                        Classification Rules:
+                        1. Use EXACT names from the list above
+                        2. Do not add prefixes or categories
+                        3. Match user's requested type if provided
+                        4. Be consistent in naming across runs
 
                         Classification Confidence Rules:
-                        - 0.9-1.0: Perfect match with all standard elements
-                        - 0.8-0.9: Clear match with most elements present
-                        - 0.7-0.8: Good match with key elements visible
-                        - 0.5-0.7: Basic elements visible but some missing
-                        - 0.3-0.5: Only few identifying elements
-                        - 0.0-0.3: Cannot identify document type
+                        - 1.0: Perfect match with all elements clearly visible
+                        - 0.95-0.99: Almost perfect match with tiny uncertainties
+                        - 0.9-0.94: Very clear match with minor elements unclear
+                        - 0.8-0.89: Clear match with some elements missing
+                        - 0.6-0.79: Basic match with several elements missing
+                        - 0.4-0.59: Uncertain match with major elements missing
+                        - 0.0-0.39: Cannot confidently identify
 
                         ROLE 2: AUTHENTICITY VERIFIER
                         Your second task is to verify document authenticity,
@@ -153,13 +153,14 @@ export class LLMService {
 
                         Critical Rules:
                         1. Classify document type BEFORE checking authenticity
-                        2. Document type can be clear even if non-authentic
-                        3. High classification confidence doesn't mean authentic
-                        4. Be consistent in classification across runs
-                        5. Be extremely strict with authenticity
-                        6. Never exceed 0.8 authenticity for digital
-                        7. List specific features observed
-                        8. Document all issues found`
+                        2. Use EXACT document type names
+                        3. Document type can be clear even if non-authentic
+                        4. High classification confidence doesn't mean authentic
+                        5. Be consistent in classification across runs
+                        6. Be extremely strict with authenticity
+                        7. Never exceed 0.8 authenticity for digital
+                        8. List specific features observed
+                        9. Document all issues found`
                     },
                     {
                         role: "user",
@@ -191,13 +192,12 @@ export class LLMService {
 
         STEP 1: DOCUMENT CLASSIFICATION
         Identify the document type based on visual layout and content:
-        - What category of document is this?
-        - What specific type within that category?
+        - What specific document type is this? (Use EXACT names from list)
         - What key identifying features do you see?
-        - How closely does it match standard format?
-        - What percentage of expected elements are present?
+        - How many standard elements are present?
+        - How clear and visible are these elements?
+        - If type was requested, does it match exactly?
         - List all identifying features observed
-        - Consider similar document types
         
         STEP 2: AUTHENTICITY VERIFICATION
         After classification, check authenticity separately:
@@ -215,25 +215,26 @@ export class LLMService {
             "is_authentic": boolean (default false),
             "authenticity_confidence": number (0-0.8 max),
             "authenticity_reason": "List security features and issues",
-            "classification": "Specific document type",
+            "classification": "EXACT document type name",
             "confidence": number (0-1.0 for classification),
             "classification_reason": "List identifying features seen",
             "alternatives": [
                 {
-                    "label": "alternative type",
+                    "label": "alternative exact type name",
                     "confidence": number (0-1.0)
                 }
             ]
         }
 
         Important Requirements:
-        - Classify document type first, then check authenticity
-        - Be consistent in classification confidence
+        - Use EXACT document type names from the list
+        - Match requested type name if provided
+        - Be consistent in type names across runs
+        - Allow 100% confidence when certain
         - Be specific about features observed
         - List all identifying elements seen
         - Document any missing elements
         - Note any inconsistencies
-        - Consider both general and specific types
         - Be extremely strict with authenticity
         - Separate classification from authenticity`;
 
@@ -243,12 +244,12 @@ export class LLMService {
             
             const response = JSON.parse(content) as Partial<ClassificationResponse>;
 
-            // Validate classification confidence - allow high confidence if features match
+            // Validate classification confidence - allow up to 100% if very certain
             const validateClassificationConfidence = (score: number | undefined) => {
                 if (typeof score !== 'number' || score < 0 || score > 1) {
                     return 0.5; // Default to moderate confidence
                 }
-                return score;
+                return score; // Allow full range 0-1
             };
 
             // Validate authenticity confidence - strict limits
@@ -260,7 +261,7 @@ export class LLMService {
             };
 
             // Validate classification
-            const classification = response.classification || "Unidentified Document";
+            const classification = response.classification || "UNKNOWN";
             const classificationConfidence = validateClassificationConfidence(response.confidence);
             
             // Validate authenticity separately with stricter rules
@@ -279,7 +280,7 @@ export class LLMService {
                     "Classification based on visible document characteristics.",
                 alternatives: Array.isArray(response.alternatives) ? 
                     response.alternatives.map(alt => ({
-                        label: alt.label || "Alternative Type",
+                        label: alt.label || "UNKNOWN",
                         confidence: validateClassificationConfidence(alt.confidence)
                     })) : []
             };
@@ -289,7 +290,7 @@ export class LLMService {
                 is_authentic: false,
                 authenticity_confidence: 0.3,
                 authenticity_reason: "Unable to verify authenticity due to processing error.",
-                classification: "Document Type Unclear",
+                classification: "UNKNOWN",
                 confidence: 0.5,
                 classification_reason: "Unable to complete classification due to processing error.",
                 alternatives: []
