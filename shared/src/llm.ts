@@ -11,6 +11,16 @@ interface ParsedResponse {
     confidence?: Record<string, unknown>;
 }
 
+interface ClassificationResponse {
+    is_authentic: boolean;
+    authenticity_confidence: number;
+    authenticity_reason: string;
+    classification: string;
+    confidence: number;
+    classification_reason: string;
+    alternatives: Array<{ label: string; confidence: number }>;
+}
+
 export class LLMService {
     private static openai: OpenAI;
 
@@ -19,12 +29,11 @@ export class LLMService {
     }
 
     private static normalizeFieldName(field: string): string {
-        // Convert to lowercase and replace spaces/special chars with underscores
         return field
             .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '_') // Replace special chars with underscore
-            .replace(/^_+|_+$/g, '') // Remove leading/trailing underscores
-            .replace(/_+/g, '_'); // Replace multiple underscores with single
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '')
+            .replace(/_+/g, '_');
     }
 
     private static validateAndNormalizeResponse(response: ParsedResponse, fieldsToExtract: string[]): ExtractedData {
@@ -33,21 +42,17 @@ export class LLMService {
             confidence: {}
         };
 
-        // Ensure fields and confidence exist
-        const fields = response.fields || {};
-        const confidence = response.confidence || {};
+        const responseFields = response.fields || {};
+        const responseConfidence = response.confidence || {};
 
-        // Process each expected field
         fieldsToExtract.forEach(field => {
             const normalizedField = this.normalizeFieldName(field);
-            const value = fields[normalizedField];
-            const confidenceValue = confidence[normalizedField];
+            const value = responseFields[normalizedField];
+            const confidenceValue = responseConfidence[normalizedField];
 
-            // Validate and convert field value to string
             result.fields[normalizedField] = typeof value === 'string' && value.trim() !== '' ? 
                 value : 'Not found';
             
-            // Validate and convert confidence value to number
             result.confidence[normalizedField] = typeof confidenceValue === 'number' && 
                 confidenceValue >= 0 && 
                 confidenceValue <= 1 ? 
@@ -69,26 +74,92 @@ export class LLMService {
 
             return await this.openai.chat.completions.create({
                 model: "gpt-4o",
+                response_format: { "type": "json_object" },
                 messages: [
                     {
                         role: "system",
-                        content: `You are a document analysis expert specializing in both verification and information extraction.
-                        Your expertise includes:
-                        - Document authenticity verification
-                        - Security feature analysis
-                        - Information extraction
-                        - Pattern recognition
+                        content: `You are a document analysis expert with two distinct roles:
+
+                        ROLE 1: DOCUMENT CLASSIFIER
+                        Your first task is to identify the document type based on visual layout and content,
+                        regardless of authenticity.
+
+                        Document Categories:
+                        1. Government IDs
+                           - Aadhaar Card: 12-digit number, UIDAI logo, demographic info
+                           - PAN Card: 10-char alphanumeric, Income Tax logo
+                           - Voter ID: EPIC number, electoral details
+                           - Driving License: License number, RTO details
+                           - Passport: MRZ code, photo page layout
                         
-                        Key Guidelines:
-                        1. Be thorough in analysis
-                        2. Consider document context
-                        3. Look for alternative data formats
-                        4. Provide detailed reasoning
-                        5. Use confidence scores appropriately
-                        6. Extract partial information when complete data isn't available
-                        7. Always respond with valid JSON only, no additional text or formatting
-                        8. Use snake_case for all field names (lowercase with underscores)
-                        9. Never return empty strings, use "Not found" if information is missing`
+                        2. Educational Documents
+                           - Certificates: Title, issuing institution, date
+                           - Transcripts: Subject list, grades, letterhead
+                           - Marksheets: Exam details, marks table
+                        
+                        3. Financial Documents
+                           - Bank Statements: Account details, transaction list
+                           - Tax Forms: PAN number, assessment year
+                           - Invoices: Invoice number, amount details
+                        
+                        4. Professional Documents
+                           - Business Letters: Letterhead, signature block
+                           - Contracts: Clause structure, party details
+                           - Reports: Title page, section headers
+
+                        Classification Confidence Rules:
+                        - 0.9-1.0: Perfect match with all standard elements
+                        - 0.8-0.9: Clear match with most elements present
+                        - 0.7-0.8: Good match with key elements visible
+                        - 0.5-0.7: Basic elements visible but some missing
+                        - 0.3-0.5: Only few identifying elements
+                        - 0.0-0.3: Cannot identify document type
+
+                        ROLE 2: AUTHENTICITY VERIFIER
+                        Your second task is to verify document authenticity,
+                        completely separate from document classification.
+
+                        Security Feature Requirements:
+                        1. Government IDs
+                           - Clear, detailed hologram
+                           - Microprinting
+                           - QR codes/barcodes
+                           - Official seals
+                           - Consistent fonts
+                           - No digital artifacts
+                        
+                        2. Other Documents
+                           - Official letterhead
+                           - Valid signatures
+                           - Proper formatting
+                           - Consistent quality
+
+                        Red Flags (Non-Authentic):
+                        - Blurred security features
+                        - Missing required elements
+                        - Digital artifacts
+                        - Template characteristics
+                        - Poor quality printing
+                        - Inconsistent fonts
+                        - Misaligned elements
+                        - Unusual spacing
+
+                        Authenticity Confidence Rules:
+                        - 0.7-0.8: Original with clear security features (max for digital)
+                        - 0.5-0.7: Likely original but some features unclear
+                        - 0.3-0.5: Cannot verify authenticity
+                        - 0.1-0.3: Signs of modification/template
+                        - 0.0-0.1: Clearly non-authentic
+
+                        Critical Rules:
+                        1. Classify document type BEFORE checking authenticity
+                        2. Document type can be clear even if non-authentic
+                        3. High classification confidence doesn't mean authentic
+                        4. Be consistent in classification across runs
+                        5. Be extremely strict with authenticity
+                        6. Never exceed 0.8 authenticity for digital
+                        7. List specific features observed
+                        8. Document all issues found`
                     },
                     {
                         role: "user",
@@ -115,13 +186,125 @@ export class LLMService {
         }
     }
 
+    static async classifyDocument(document: Document, criteria: string): Promise<ClassificationResponse> {
+        const prompt = `Analyze this document in two separate steps:
+
+        STEP 1: DOCUMENT CLASSIFICATION
+        Identify the document type based on visual layout and content:
+        - What category of document is this?
+        - What specific type within that category?
+        - What key identifying features do you see?
+        - How closely does it match standard format?
+        - What percentage of expected elements are present?
+        - List all identifying features observed
+        - Consider similar document types
+        
+        STEP 2: AUTHENTICITY VERIFICATION
+        After classification, check authenticity separately:
+        - What security features are present/missing?
+        - How clear are the security features?
+        - Are there any signs of tampering?
+        - Is this a template or mock-up?
+        - List any red flags observed
+        - Document specific issues found
+
+        Additional Criteria: ${criteria}
+
+        Respond with a JSON object containing:
+        {
+            "is_authentic": boolean (default false),
+            "authenticity_confidence": number (0-0.8 max),
+            "authenticity_reason": "List security features and issues",
+            "classification": "Specific document type",
+            "confidence": number (0-1.0 for classification),
+            "classification_reason": "List identifying features seen",
+            "alternatives": [
+                {
+                    "label": "alternative type",
+                    "confidence": number (0-1.0)
+                }
+            ]
+        }
+
+        Important Requirements:
+        - Classify document type first, then check authenticity
+        - Be consistent in classification confidence
+        - Be specific about features observed
+        - List all identifying elements seen
+        - Document any missing elements
+        - Note any inconsistencies
+        - Consider both general and specific types
+        - Be extremely strict with authenticity
+        - Separate classification from authenticity`;
+
+        try {
+            const completion = await this.analyzeDocument(document, prompt);
+            const content = completion.choices[0].message.content || '{}';
+            
+            const response = JSON.parse(content) as Partial<ClassificationResponse>;
+
+            // Validate classification confidence - allow high confidence if features match
+            const validateClassificationConfidence = (score: number | undefined) => {
+                if (typeof score !== 'number' || score < 0 || score > 1) {
+                    return 0.5; // Default to moderate confidence
+                }
+                return score;
+            };
+
+            // Validate authenticity confidence - strict limits
+            const validateAuthenticityConfidence = (score: number | undefined) => {
+                if (typeof score !== 'number' || score < 0 || score > 1) {
+                    return 0.3; // Default to low confidence
+                }
+                return Math.min(score, 0.8); // Cap at 0.8 for digital
+            };
+
+            // Validate classification
+            const classification = response.classification || "Unidentified Document";
+            const classificationConfidence = validateClassificationConfidence(response.confidence);
+            
+            // Validate authenticity separately with stricter rules
+            const isAuthentic = response.is_authentic === true && 
+                              validateAuthenticityConfidence(response.authenticity_confidence) > 0.6;
+            const authenticityConfidence = validateAuthenticityConfidence(response.authenticity_confidence);
+
+            return {
+                is_authentic: isAuthentic,
+                authenticity_confidence: authenticityConfidence,
+                authenticity_reason: response.authenticity_reason || 
+                    "Document treated as non-authentic due to insufficient security features.",
+                classification: classification,
+                confidence: classificationConfidence,
+                classification_reason: response.classification_reason || 
+                    "Classification based on visible document characteristics.",
+                alternatives: Array.isArray(response.alternatives) ? 
+                    response.alternatives.map(alt => ({
+                        label: alt.label || "Alternative Type",
+                        confidence: validateClassificationConfidence(alt.confidence)
+                    })) : []
+            };
+        } catch (error) {
+            console.error('Error in document classification:', error);
+            return {
+                is_authentic: false,
+                authenticity_confidence: 0.3,
+                authenticity_reason: "Unable to verify authenticity due to processing error.",
+                classification: "Document Type Unclear",
+                confidence: 0.5,
+                classification_reason: "Unable to complete classification due to processing error.",
+                alternatives: []
+            };
+        }
+    }
+
     static async parseDocument(document: Document, schema: string, retryCount = 0): Promise<ExtractedData> {
         try {
-            // First, analyze the schema to identify the fields to extract
             const schemaAnalysisPrompt = `Analyze this schema and list the fields to extract: ${schema}
             
-            Convert the field names to snake_case format and respond with ONLY a JSON array of field names, no additional text or formatting. For example:
-            ["invoice_number", "date_of_birth", "phone_number"]
+            Convert the field names to snake_case format and respond with a JSON object containing an array of field names. For example:
+            {
+                "fields": ["invoice_number", "date_of_birth", "phone_number"]
+            }
             
             Rules:
             1. Convert field names to snake_case (lowercase with underscores)
@@ -133,6 +316,7 @@ export class LLMService {
 
             const schemaCompletion = await this.openai.chat.completions.create({
                 model: "gpt-4o",
+                response_format: { "type": "json_object" },
                 messages: [
                     {
                         role: "system",
@@ -145,28 +329,17 @@ export class LLMService {
                 ]
             });
 
-            const schemaContent = schemaCompletion.choices[0].message.content || '[]';
-            const cleanedSchemaContent = schemaContent.replace(/```json\s*|\s*```/g, '').trim();
-            const parsedFields = JSON.parse(cleanedSchemaContent);
-            
-            // Validate that parsedFields is an array of strings
-            if (!Array.isArray(parsedFields)) {
-                throw new Error('Schema analysis did not return an array');
-            }
-            
-            // Normalize field names to ensure consistency
-            const fieldsToExtract = parsedFields.map(field => {
-                if (typeof field !== 'string') {
-                    throw new Error('Schema analysis returned non-string field name');
-                }
-                return this.normalizeFieldName(field);
-            }).filter(field => field.length > 0); // Remove any empty field names
+            const schemaContent = schemaCompletion.choices[0].message.content || '{"fields":[]}';
+            const parsedSchema = JSON.parse(schemaContent);
+            const fieldsToExtract = (parsedSchema.fields || [])
+                .filter((field: unknown) => typeof field === 'string')
+                .map((field: string) => this.normalizeFieldName(field))
+                .filter((field: string) => field.length > 0);
 
             if (fieldsToExtract.length === 0) {
                 throw new Error('No valid fields identified in schema');
             }
 
-            // Now use these fields in the document analysis prompt
             const extractionPrompt = `Extract the following information from this document: ${fieldsToExtract.join(', ')}
 
             Context: ${schema}
@@ -178,7 +351,7 @@ export class LLMService {
             4. Never return empty values, use "Not found" if information is missing
             5. Provide confidence scores based on clarity of extraction
 
-            You must respond with ONLY a JSON object in this exact format, no additional text or formatting:
+            You must respond with a JSON object in this exact format:
             {
                 "fields": {
                     ${fieldsToExtract.map((field: string) => `"${field}": "extracted value or Not found"`).join(',\n                    ')}
@@ -200,14 +373,9 @@ export class LLMService {
             const completion = await this.analyzeDocument(document, extractionPrompt);
             const content = completion.choices[0].message.content || '{}';
             
-            // Clean the content to ensure it's valid JSON
-            const cleanedContent = content.replace(/```json\s*|\s*```/g, '').trim();
-            const response: ParsedResponse = JSON.parse(cleanedContent);
-
-            // Validate and normalize the response
+            const response: ParsedResponse = JSON.parse(content);
             const result = this.validateAndNormalizeResponse(response, fieldsToExtract);
 
-            // Check if we got empty results and should retry
             const hasEmptyFields = Object.values(result.fields).some(value => !value || value === '');
             if (hasEmptyFields && retryCount < 2) {
                 console.log('Some fields were empty, retrying extraction...');
@@ -221,7 +389,6 @@ export class LLMService {
                 console.log('Retrying due to error...');
                 return this.parseDocument(document, schema, retryCount + 1);
             }
-            // If all retries failed, return empty results with low confidence
             return {
                 fields: {},
                 confidence: {}
