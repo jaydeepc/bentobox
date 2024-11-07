@@ -136,7 +136,7 @@ const Matching = () => {
                 };
             }
 
-            const response = await axios.post('http://localhost:3003/match', requestData);
+            const response = await axios.post(`${import.meta.env.VITE_MATCHING_SERVICE_URL}/match`, requestData);
             setResults(response.data.match_results);
         } catch (error) {
             console.error('Matching error:', error);

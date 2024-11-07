@@ -47,7 +47,7 @@ const Parsing = () => {
         })
       );
 
-      const response = await axios.post('http://localhost:3002/parse', {
+      const response = await axios.post(`${import.meta.env.VITE_PARSING_SERVICE_URL}/parse`, {
         documents,
         schema
       });

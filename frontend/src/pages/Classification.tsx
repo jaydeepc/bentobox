@@ -77,7 +77,7 @@ const Classification = () => {
         })
       );
 
-      const response = await axios.post('http://localhost:3001/classify', {
+      const response = await axios.post(`${import.meta.env.VITE_CLASSIFICATION_SERVICE_URL}/classify`, {
         documents: documentsData,
         criteria
       });
