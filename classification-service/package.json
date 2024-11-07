@@ -1,36 +1,29 @@
 {
   "name": "classification-service",
   "version": "1.0.0",
-  "description": "Document classification service using GPT-4 Vision",
-  "main": "dist/app.js",
+  "description": "",
+  "main": "index.js",
   "scripts": {
-    "start": "node dist/app.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
-    "build": "tsc -b",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "ts-node src/app.ts",
+    "build": "tsc",
+    "dev": "nodemon src/app.ts"
   },
-  "keywords": [
-    "document-classification",
-    "gpt4",
-    "vision",
-    "ai",
-    "microservice"
-  ],
+  "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@types/cors": "^2.8.17",
-    "body-parser": "^1.20.2",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.11.24",
     "cors": "^2.8.5",
-    "dotenv": "^16.0.3",
-    "express": "^4.18.2",
-    "express-validator": "^7.2.0",
-    "openai": "^4.0.0"
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3",
+    "express-validator": "^7.0.1",
+    "openai": "^4.28.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
   },
   "devDependencies": {
-    "@types/express": "^4.17.17",
-    "@types/node": "^18.15.11",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^5.0.4"
+    "nodemon": "^3.1.0"
   }
 }
